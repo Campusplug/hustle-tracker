@@ -30,19 +30,68 @@
   <ul id="tasks"></ul>
 </div>
 
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-  // Your web app's Firebase configuration
-  };const firebaseConfig = {
-  apiKey: "AIzaSyXXXX",
+<script>
+const firebaseConfig = {
+  apiKey: "YOUR REAL API KEY",
   authDomain: "student-hustle-tracker.firebaseapp.com",
   projectId: "student-hustle-tracker"
 };
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+function register(){
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  auth.createUserWithEmailAndPassword(email, password)
+    .then(() => alert("Registered successfully"))
+    .catch(err => alert(err.message));
+}
+
+function login(){
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  auth.signInWithEmailAndPassword(email, password)
+    .catch(err => alert(err.message));
+}
+
+function logout(){
+  auth.signOut();
+}
+
+auth.onAuthStateChanged(user => {
+  if(user){
+    document.getElementById("auth").style.display="none";
+    document.getElementById("app").style.display="block";
+    loadTasks(user.uid);
+  }
+});
+
+function addTask(){
+  const text = document.getElementById("taskInput").value;
+
+  db.collection("users").doc(auth.currentUser.uid)
+    .collection("tasks")
+    .add({text: text})
+    .then(() => loadTasks(auth.currentUser.uid));
+}
+
+function loadTasks(uid){
+  db.collection("users").doc(uid)
+    .collection("tasks")
+    .get().then(snapshot => {
+      const list = document.getElementById("tasks");
+      list.innerHTML="";
+      snapshot.forEach(doc=>{
+        list.innerHTML += `<li>${doc.data().text}</li>`;
+      });
+    });
+}
 </script>
