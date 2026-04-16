@@ -71,6 +71,9 @@ auth.onAuthStateChanged(user => {
     document.getElementById("auth").style.display="none";
     document.getElementById("app").style.display="block";
     loadTasks(user.uid);
+  } else {
+    document.getElementById("auth").style.display="block";
+    document.getElementById("app").style.display="none";
   }
 });
 
