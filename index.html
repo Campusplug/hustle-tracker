@@ -54,9 +54,11 @@ function register(){
     .catch(err => alert(err.message));
 }
 
-function login(){
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+function logout(){
+  auth.signOut().then(() => {
+    alert("Logged out");
+  });
+}
 
   auth.signInWithEmailAndPassword(email, password)
     .catch(err => alert(err.message));
