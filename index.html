@@ -3,32 +3,112 @@
 <head>
   <title>Hustle Tracker</title>
 
-  <!-- Firebase (LOAD ONLY ONCE) -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+  <!-- Style -->
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 15px;
+      margin: 15px auto;
+      max-width: 400px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+
+    input {
+      width: 90%;
+      padding: 10px;
+      margin: 10px;
+      border-radius: 10px;
+      border: none;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 10px;
+      background: #22c55e;
+      color: white;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #16a34a;
+    }
+
+    .logout {
+      background: #ef4444;
+    }
+
+    .task {
+      background: #334155;
+      padding: 10px;
+      margin: 5px;
+      border-radius: 10px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      background: #334155;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .progress {
+      height: 10px;
+      background: #22c55e;
+      width: 0%;
+    }
+  </style>
 </head>
 
 <body>
 
-<h2>💰 Hustle Tracker</h2>
+<h1>💰 Hustle Tracker</h1>
 
-<div id="auth">
-  <input id="email" placeholder="Email"><br><br>
-  <input id="password" type="password" placeholder="Password"><br><br>
-
+<div id="auth" class="card">
+  <h3>Login / Register</h3>
+  <input id="email" placeholder="Email"><br>
+  <input id="password" type="password" placeholder="Password"><br>
   <button onclick="register()">Register</button>
   <button onclick="login()">Login</button>
 </div>
 
 <div id="app" style="display:none;">
-  <button onclick="logout()">Logout</button>
 
-  <h3>Add Task</h3>
-  <input id="taskInput">
-  <button onclick="addTask()">Add</button>
+  <div class="card">
+    <button class="logout" onclick="logout()">Logout</button>
+    <h3>Add Daily Task</h3>
+    <input id="taskInput" placeholder="e.g Post 2 reels">
+    <button onclick="addTask()">Add Task</button>
+  </div>
 
-  <ul id="tasks"></ul>
+  <div class="card">
+    <h3>Your Progress</h3>
+    <div class="progress-bar">
+      <div id="progress" class="progress"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Your Tasks</h3>
+    <div id="tasks"></div>
+  </div>
+
 </div>
 
 <script>
@@ -46,26 +126,29 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 function register(){
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+  const email = emailInput();
+  const password = passwordInput();
 
   auth.createUserWithEmailAndPassword(email, password)
     .then(() => alert("Registered successfully"))
     .catch(err => alert(err.message));
 }
 
-function logout(){
-  auth.signOut().then(() => {
-    alert("Logged out");
-  });
-}
-
-  auth.signInWithEmailAndPassword(email, password)
+function login(){
+  auth.signInWithEmailAndPassword(emailInput(), passwordInput())
     .catch(err => alert(err.message));
 }
 
 function logout(){
   auth.signOut();
+}
+
+function emailInput(){
+  return document.getElementById("email").value;
+}
+
+function passwordInput(){
+  return document.getElementById("password").value;
 }
 
 auth.onAuthStateChanged(user => {
@@ -84,7 +167,14 @@ function addTask(){
 
   db.collection("users").doc(auth.currentUser.uid)
     .collection("tasks")
-    .add({text: text})
+    .add({text: text, done: false})
+    .then(() => loadTasks(auth.currentUser.uid));
+}
+
+function toggleTask(id, done){
+  db.collection("users").doc(auth.currentUser.uid)
+    .collection("tasks").doc(id)
+    .update({done: !done})
     .then(() => loadTasks(auth.currentUser.uid));
 }
 
@@ -92,11 +182,28 @@ function loadTasks(uid){
   db.collection("users").doc(uid)
     .collection("tasks")
     .get().then(snapshot => {
-      const list = document.getElementById("tasks");
-      list.innerHTML="";
+
+      const container = document.getElementById("tasks");
+      container.innerHTML="";
+
+      let total = 0;
+      let completed = 0;
+
       snapshot.forEach(doc=>{
-        list.innerHTML += `<li>${doc.data().text}</li>`;
+        const data = doc.data();
+        total++;
+
+        if(data.done) completed++;
+
+        container.innerHTML += `
+          <div class="task" onclick="toggleTask('${doc.id}', ${data.done})">
+            ${data.done ? "✅" : "⬜"} ${data.text}
+          </div>
+        `;
       });
+
+      let progress = total ? (completed/total)*100 : 0;
+      document.getElementById("progress").style.width = progress + "%";
     });
 }
 </script>
