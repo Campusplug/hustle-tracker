@@ -8,7 +8,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-  <!-- Style -->
   <style>
     body {
       font-family: Arial;
@@ -24,7 +23,6 @@
       border-radius: 15px;
       margin: 15px auto;
       max-width: 400px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
     }
 
     input {
@@ -45,13 +43,7 @@
       font-weight: bold;
     }
 
-    button:hover {
-      background: #16a34a;
-    }
-
-    .logout {
-      background: #ef4444;
-    }
+    .logout { background: #ef4444; }
 
     .task {
       background: #334155;
@@ -65,7 +57,6 @@
       background: #334155;
       border-radius: 10px;
       overflow: hidden;
-      margin-top: 10px;
     }
 
     .progress {
@@ -82,8 +73,8 @@
 
 <div id="auth" class="card">
   <h3>Login / Register</h3>
-  <input id="email" placeholder="Email"><br>
-  <input id="password" type="password" placeholder="Password"><br>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
   <button onclick="register()">Register</button>
   <button onclick="login()">Login</button>
 </div>
@@ -92,13 +83,25 @@
 
   <div class="card">
     <button class="logout" onclick="logout()">Logout</button>
+  </div>
+
+  <!-- 💸 Earnings Tracker -->
+  <div class="card">
+    <h3>💸 Earnings Tracker</h3>
+    <input id="earningInput" placeholder="Enter amount (R)">
+    <button onclick="addEarning()">Add Earnings</button>
+    <h2>Total: R <span id="totalEarnings">0</span></h2>
+  </div>
+
+  <!-- Tasks -->
+  <div class="card">
     <h3>Add Daily Task</h3>
     <input id="taskInput" placeholder="e.g Post 2 reels">
     <button onclick="addTask()">Add Task</button>
   </div>
 
   <div class="card">
-    <h3>Your Progress</h3>
+    <h3>Progress</h3>
     <div class="progress-bar">
       <div id="progress" class="progress"></div>
     </div>
@@ -115,10 +118,7 @@
 const firebaseConfig = {
   apiKey: "AIzaSyCJwYB5tOa5zpZxZhp6h_QkvNgpFcCEeOU",
   authDomain: "student-hustle-tracker.firebaseapp.com",
-  projectId: "student-hustle-tracker",
-  storageBucket: "student-hustle-tracker.firebasestorage.app",
-  messagingSenderId: "594345490240",
-  appId: "1:594345490240:web:59c71df98059b5bc3aaca5"
+  projectId: "student-hustle-tracker"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -126,16 +126,12 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 function register(){
-  const email = emailInput();
-  const password = passwordInput();
-
-  auth.createUserWithEmailAndPassword(email, password)
-    .then(() => alert("Registered successfully"))
+  auth.createUserWithEmailAndPassword(email.value, password.value)
     .catch(err => alert(err.message));
 }
 
 function login(){
-  auth.signInWithEmailAndPassword(emailInput(), passwordInput())
+  auth.signInWithEmailAndPassword(email.value, password.value)
     .catch(err => alert(err.message));
 }
 
@@ -143,19 +139,12 @@ function logout(){
   auth.signOut();
 }
 
-function emailInput(){
-  return document.getElementById("email").value;
-}
-
-function passwordInput(){
-  return document.getElementById("password").value;
-}
-
 auth.onAuthStateChanged(user => {
   if(user){
     document.getElementById("auth").style.display="none";
     document.getElementById("app").style.display="block";
     loadTasks(user.uid);
+    loadEarnings(user.uid);
   } else {
     document.getElementById("auth").style.display="block";
     document.getElementById("app").style.display="none";
@@ -163,11 +152,9 @@ auth.onAuthStateChanged(user => {
 });
 
 function addTask(){
-  const text = document.getElementById("taskInput").value;
-
   db.collection("users").doc(auth.currentUser.uid)
     .collection("tasks")
-    .add({text: text, done: false})
+    .add({text: taskInput.value, done:false})
     .then(() => loadTasks(auth.currentUser.uid));
 }
 
@@ -183,27 +170,47 @@ function loadTasks(uid){
     .collection("tasks")
     .get().then(snapshot => {
 
-      const container = document.getElementById("tasks");
-      container.innerHTML="";
-
-      let total = 0;
-      let completed = 0;
+      let total=0, completed=0;
+      tasks.innerHTML="";
 
       snapshot.forEach(doc=>{
-        const data = doc.data();
+        let data=doc.data();
         total++;
-
         if(data.done) completed++;
 
-        container.innerHTML += `
+        tasks.innerHTML += `
           <div class="task" onclick="toggleTask('${doc.id}', ${data.done})">
             ${data.done ? "✅" : "⬜"} ${data.text}
-          </div>
-        `;
+          </div>`;
       });
 
       let progress = total ? (completed/total)*100 : 0;
       document.getElementById("progress").style.width = progress + "%";
+    });
+}
+
+// 💸 Earnings logic
+function addEarning(){
+  let amount = Number(document.getElementById("earningInput").value);
+
+  db.collection("users").doc(auth.currentUser.uid)
+    .collection("earnings")
+    .add({amount: amount})
+    .then(() => loadEarnings(auth.currentUser.uid));
+}
+
+function loadEarnings(uid){
+  db.collection("users").doc(uid)
+    .collection("earnings")
+    .get().then(snapshot => {
+
+      let total = 0;
+
+      snapshot.forEach(doc=>{
+        total += doc.data().amount;
+      });
+
+      document.getElementById("totalEarnings").innerText = total;
     });
 }
 </script>
